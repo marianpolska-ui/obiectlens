@@ -10,128 +10,218 @@
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body { background:#0a0a0f; color:#fff; font-family:monospace; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-#header { padding:10px 16px; background:#12121a; border-bottom:1px solid #1e1e2e; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
-#header h1 { font-size:1rem; color:#00ff9d; letter-spacing:3px; }
-#fps { font-size:0.6rem; color:#333; }
+#header { padding:9px 14px; background:#12121a; border-bottom:1px solid #1e1e2e; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+#header h1 { font-size:0.95rem; color:#00ff9d; letter-spacing:3px; }
+#fps-label { font-size:0.58rem; color:#333; }
 
-#cam-wrap { position:relative; flex:1; background:#000; overflow:hidden; touch-action:none; }
+#tabs { display:flex; background:#0e0e18; border-bottom:1px solid #1e1e2e; flex-shrink:0; }
+.tab { flex:1; padding:8px; text-align:center; font-size:0.62rem; letter-spacing:1px; color:#333; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
+.tab.active { color:#00ff9d; border-bottom-color:#00ff9d; }
+
+/* Camera view */
+#view-camera { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+#cam-wrap { position:relative; flex:1; background:#000; overflow:hidden; }
 #video { width:100%; height:100%; object-fit:cover; display:block; }
-#canvas { position:absolute; inset:0; width:100%; height:100%; }
+#canvas { position:absolute; inset:0; width:100%; height:100%; cursor:crosshair; }
 
-/* Start screen */
-#start-screen { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:rgba(0,0,0,0.93); z-index:20; }
-#start-btn { background:#00ff9d; color:#000; border:none; padding:14px 36px; font-family:monospace; font-size:1rem; font-weight:bold; letter-spacing:3px; cursor:pointer; border-radius:4px; }
-#start-screen p { font-size:0.68rem; color:#444; text-align:center; line-height:1.9; }
+#tap-hint { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); border:1px solid #222; color:#444; padding:5px 14px; font-size:0.6rem; letter-spacing:1px; border-radius:20px; white-space:nowrap; pointer-events:none; transition:opacity 0.5s; }
 
-/* Loading */
-#loading { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:rgba(0,0,0,0.96); z-index:20; }
-#loading.show { display:flex; }
-#load-title { font-size:0.9rem; color:#00ff9d; letter-spacing:3px; }
-#load-bar-bg { width:240px; height:3px; background:#1a1a2e; border-radius:2px; overflow:hidden; }
-#load-bar { height:100%; width:0%; background:linear-gradient(90deg,#00ff9d,#00c8ff); transition:width 0.3s; }
-#load-msg { font-size:0.6rem; color:#444; letter-spacing:1px; }
+#result-card { position:absolute; top:10px; left:10px; right:10px; background:rgba(5,5,14,0.96); border-radius:8px; padding:12px 14px; z-index:10; display:none; border:1px solid #1e1e2e; }
+#result-card.show { display:block; animation:popIn 0.2s ease; }
+@keyframes popIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+#result-top { display:flex; justify-content:space-between; align-items:center; }
+#result-name { font-size:1rem; font-weight:bold; }
+#result-count-wrap { text-align:right; }
+#result-count { font-size:2.8rem; font-weight:bold; line-height:1; }
+#result-count-lbl { font-size:0.5rem; color:#444; letter-spacing:1px; }
+#result-bar-bg { margin-top:8px; height:2px; background:#1a1a2e; border-radius:1px; }
+#result-bar-fill { height:100%; border-radius:1px; transition:width 0.4s; }
+#result-others { margin-top:8px; display:flex; flex-wrap:wrap; gap:4px; }
+.other-chip { font-size:0.62rem; padding:2px 8px; border-radius:10px; border:1px solid; }
+#result-close { position:absolute; top:8px; right:10px; background:none; border:none; color:#333; font-size:1rem; cursor:pointer; }
 
-/* Tap hint */
-#tap-hint { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); border:1px solid #222; color:#555; padding:6px 16px; font-size:0.65rem; letter-spacing:1px; border-radius:20px; white-space:nowrap; pointer-events:none; transition:opacity 0.5s; }
-
-/* Result card */
-#result-card { position:absolute; top:12px; left:12px; right:12px; background:rgba(5,5,12,0.95); border-radius:8px; padding:14px 16px; z-index:10; display:none; border:1px solid #1e1e2e; }
-#result-card.show { display:block; animation:slideDown 0.25s ease; }
-@keyframes slideDown { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
-#result-header { display:flex; justify-content:space-between; align-items:flex-start; }
-#result-left {}
-#result-label { font-size:0.55rem; color:#444; letter-spacing:2px; margin-bottom:3px; }
-#result-name { font-size:1.1rem; font-weight:bold; }
-#result-right { text-align:right; }
-#result-big { font-size:3rem; font-weight:bold; line-height:1; }
-#result-big-label { font-size:0.55rem; color:#444; letter-spacing:1px; }
-#result-close { position:absolute; top:8px; right:10px; background:none; border:none; color:#333; font-size:1rem; cursor:pointer; padding:4px; }
-#result-bar { margin-top:10px; height:3px; background:#1a1a2e; border-radius:2px; overflow:hidden; }
-#result-bar-fill { height:100%; border-radius:2px; transition:width 0.4s; }
-#result-others { margin-top:10px; display:flex; flex-wrap:wrap; gap:5px; }
-.other-tag { font-size:0.65rem; padding:3px 9px; border-radius:12px; border:1px solid; }
-
-/* Bottom */
-#bottom { background:#12121a; border-top:1px solid #1e1e2e; padding:10px 14px; flex-shrink:0; }
-#counts-row { display:flex; gap:5px; flex-wrap:wrap; min-height:28px; align-items:center; }
-.count-chip { padding:3px 10px; border-radius:12px; font-size:0.68rem; font-weight:bold; border:1.5px solid; cursor:pointer; transition:all 0.15s; }
-.count-chip.active { filter:brightness(1.5); transform:scale(1.05); }
-#bottom-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid #111; }
-#total-wrap { display:flex; align-items:baseline; gap:8px; }
-#total-num { font-size:1.6rem; font-weight:bold; color:#00ff9d; line-height:1; }
-#total-lbl { font-size:0.55rem; color:#333; letter-spacing:1px; }
-#btn-row { display:flex; gap:6px; }
-.btn-sm { padding:6px 12px; border:1px solid #2a2a2a; background:transparent; color:#555; font-family:monospace; font-size:0.6rem; letter-spacing:1px; cursor:pointer; border-radius:3px; }
+#cam-bottom { background:#12121a; border-top:1px solid #1e1e2e; padding:8px 12px; flex-shrink:0; }
+#live-chips { display:flex; gap:4px; flex-wrap:wrap; min-height:26px; align-items:center; }
+.live-chip { padding:3px 9px; border-radius:10px; font-size:0.65rem; font-weight:bold; border:1.5px solid; cursor:pointer; transition:all 0.15s; }
+.live-chip.sel { filter:brightness(1.6); transform:scale(1.06); }
+#cam-footer { display:flex; justify-content:space-between; align-items:center; margin-top:7px; padding-top:7px; border-top:1px solid #111; }
+#total-now { font-size:0.58rem; color:#333; }
+#total-now span { color:#00ff9d; font-size:1.1rem; font-weight:bold; }
+#cam-btns { display:flex; gap:6px; }
+.btn-sm { padding:5px 11px; border:1px solid #2a2a2a; background:transparent; color:#555; font-family:monospace; font-size:0.58rem; letter-spacing:1px; cursor:pointer; border-radius:3px; }
 .btn-sm:active { background:#1a1a1a; }
+
+/* Memory view */
+#view-memory { display:none; flex:1; flex-direction:column; overflow:hidden; }
+#mem-header { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid #1e1e2e; flex-shrink:0; }
+#mem-header span { font-size:0.6rem; color:#444; letter-spacing:1px; }
+#mem-clear { background:none; border:1px solid #2a2a2a; color:#444; font-family:monospace; font-size:0.58rem; padding:4px 10px; cursor:pointer; border-radius:3px; letter-spacing:1px; }
+#mem-clear:active { background:#1a1a1a; }
+#mem-list { flex:1; overflow-y:auto; padding:10px 12px; }
+#mem-list::-webkit-scrollbar { width:3px; }
+#mem-list::-webkit-scrollbar-thumb { background:#1e1e2e; }
+.mem-item { display:flex; align-items:center; padding:10px 12px; margin-bottom:6px; background:#12121a; border-radius:6px; border:1px solid #1e1e2e; gap:10px; animation:slideIn 0.2s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:translateX(0)} }
+.mem-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.mem-name { flex:1; font-size:0.82rem; }
+.mem-stats { text-align:right; }
+.mem-max { font-size:1.2rem; font-weight:bold; line-height:1; }
+.mem-max-lbl { font-size:0.5rem; color:#333; letter-spacing:1px; }
+.mem-seen { font-size:0.55rem; color:#333; margin-top:2px; }
+.mem-bar-bg { height:2px; background:#1a1a2e; border-radius:1px; margin-top:6px; }
+.mem-bar-fill { height:100%; border-radius:1px; }
+#mem-empty { text-align:center; padding:3rem; font-size:0.65rem; color:#222; line-height:2; }
+
+/* Start / Loading */
+#start-screen { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:rgba(0,0,0,0.94); z-index:30; }
+#start-btn { background:#00ff9d; color:#000; border:none; padding:13px 34px; font-family:monospace; font-size:0.95rem; font-weight:bold; letter-spacing:3px; cursor:pointer; border-radius:4px; }
+#start-screen p { font-size:0.65rem; color:#444; text-align:center; line-height:1.9; }
+#loading { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; background:rgba(0,0,0,0.96); z-index:30; }
+#loading.show { display:flex; }
+#load-title { font-size:0.85rem; color:#00ff9d; letter-spacing:3px; }
+#load-bar-bg { width:220px; height:3px; background:#1a1a2e; border-radius:2px; overflow:hidden; }
+#load-bar { height:100%; width:0%; background:linear-gradient(90deg,#00ff9d,#00c8ff); transition:width 0.3s; }
+#load-msg { font-size:0.58rem; color:#444; letter-spacing:1px; }
 </style>
 </head>
 <body>
 
 <div id="header">
   <h1>OBJECTLENS</h1>
-  <span id="fps">● OFFLINE</span>
+  <span id="fps-label">● OFFLINE</span>
 </div>
 
-<div id="cam-wrap" id="cam">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="canvas"></canvas>
+<div id="tabs">
+  <div class="tab active" onclick="showTab('camera')">📷 KAMERA NA ŻYWO</div>
+  <div class="tab" onclick="showTab('memory')" id="tab-mem">🧠 PAMIĘĆ <span id="mem-badge"></span></div>
+</div>
 
-  <div id="tap-hint">👆 DOTKNIJ OBIEKT ABY GO POLICZYĆ</div>
+<!-- CAMERA TAB -->
+<div id="view-camera">
+  <div id="cam-wrap">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div id="tap-hint">👆 DOTKNIJ OBIEKT ABY GO ZAZNACZYĆ</div>
 
-  <div id="result-card">
-    <button id="result-close" onclick="closeResult()">✕</button>
-    <div id="result-header">
-      <div id="result-left">
-        <div id="result-label">WYBRANY OBIEKT</div>
-        <div id="result-name">—</div>
+    <div id="result-card">
+      <button id="result-close" onclick="clearSelected()">✕</button>
+      <div id="result-top">
+        <div>
+          <div style="font-size:0.5rem;color:#444;letter-spacing:2px;margin-bottom:3px">ZAZNACZONY</div>
+          <div id="result-name">—</div>
+        </div>
+        <div id="result-count-wrap">
+          <div id="result-count">0</div>
+          <div id="result-count-lbl">W KADRZE</div>
+        </div>
       </div>
-      <div id="result-right">
-        <div id="result-big">0</div>
-        <div id="result-big-label">W KADRZE</div>
+      <div id="result-bar-bg"><div id="result-bar-fill"></div></div>
+      <div id="result-others"></div>
+    </div>
+
+    <div id="loading">
+      <div id="load-title">ŁADOWANIE AI</div>
+      <div id="load-bar-bg"><div id="load-bar"></div></div>
+      <div id="load-msg">Proszę czekać...</div>
+    </div>
+
+    <div id="start-screen">
+      <div style="font-size:3rem">📷</div>
+      <button id="start-btn" onclick="startApp()">URUCHOM KAMERĘ</button>
+      <p>Detekcja AI działa lokalnie w przeglądarce<br>Dotknij obiekt na ekranie aby go policzyć<br>Pamięć zachowuje wszystkie wykryte obiekty</p>
+    </div>
+  </div>
+
+  <div id="cam-bottom">
+    <div id="live-chips"><span style="font-size:0.6rem;color:#222">Uruchom kamerę...</span></div>
+    <div id="cam-footer">
+      <div id="total-now">W KADRZE: <span id="total-num">0</span></div>
+      <div id="cam-btns">
+        <button class="btn-sm" onclick="switchCam()">⟳ CAM</button>
+        <button class="btn-sm" onclick="togglePause()" id="pause-btn">⏸ PAUZA</button>
+        <button class="btn-sm" onclick="showTab('memory')">🧠 PAMIĘĆ</button>
       </div>
     </div>
-    <div id="result-bar"><div id="result-bar-fill"></div></div>
-    <div id="result-others"></div>
-  </div>
-
-  <div id="loading">
-    <div id="load-title">ŁADOWANIE AI</div>
-    <div id="load-bar-bg"><div id="load-bar"></div></div>
-    <div id="load-msg">Proszę czekać...</div>
-  </div>
-
-  <div id="start-screen">
-    <div style="font-size:3rem">📷</div>
-    <button id="start-btn" onclick="startApp()">URUCHOM KAMERĘ</button>
-    <p>Kamera + detekcja AI działa lokalnie<br>Dotknij obiekt na ekranie aby go policzyć</p>
   </div>
 </div>
 
-<div id="bottom">
-  <div id="counts-row"><span style="font-size:0.6rem;color:#222">Uruchom kamerę...</span></div>
-  <div id="bottom-footer">
-    <div id="total-wrap">
-      <span id="total-num">0</span>
-      <span id="total-lbl">OBIEKTÓW ŁĄCZNIE</span>
-    </div>
-    <div id="btn-row">
-      <button class="btn-sm" onclick="switchCam()">⟳ CAM</button>
-      <button class="btn-sm" onclick="togglePause()" id="pause-btn">⏸ PAUSE</button>
-    </div>
+<!-- MEMORY TAB -->
+<div id="view-memory">
+  <div id="mem-header">
+    <span id="mem-count-lbl">0 ZAPAMIĘTANYCH OBIEKTÓW</span>
+    <button id="mem-clear" onclick="clearMemory()">✕ WYCZYŚĆ</button>
+  </div>
+  <div id="mem-list">
+    <div id="mem-empty">Brak zapamiętanych obiektów.<br>Wróć do kamery i wykryj coś!</div>
   </div>
 </div>
 
 <script>
-const COLORS = ['#00ff9d','#00c8ff','#ff3d7f','#ffd700','#a78bfa','#fb923c','#34d399','#f472b6','#60a5fa','#2dd4bf'];
-const PL = {person:'Osoba',bicycle:'Rower',car:'Samochód',motorcycle:'Motor',airplane:'Samolot',bus:'Autobus',train:'Pociąg',truck:'Ciężarówka',boat:'Łódź','traffic light':'Sygnalizacja',bench:'Ławka',bird:'Ptak',cat:'Kot',dog:'Pies',horse:'Koń',sheep:'Owca',cow:'Krowa',elephant:'Słoń',bear:'Niedźwiedź',zebra:'Zebra',giraffe:'Żyrafa',backpack:'Plecak',umbrella:'Parasol',handbag:'Torebka',tie:'Krawat',suitcase:'Walizka',bottle:'Butelka',cup:'Kubek',fork:'Widelec',knife:'Nóż',spoon:'Łyżka',bowl:'Miska',banana:'Banan',apple:'Jabłko',sandwich:'Kanapka',orange:'Pomarańcza',pizza:'Pizza',donut:'Pączek',cake:'Tort',chair:'Krzesło',couch:'Sofa','potted plant':'Roślina',bed:'Łóżko',toilet:'Toaleta',tv:'Telewizor',laptop:'Laptop',mouse:'Mysz',keyboard:'Klawiatura','cell phone':'Telefon',book:'Książka',clock:'Zegar',vase:'Wazon',scissors:'Nożyczki','teddy bear':'Miś','hair drier':'Suszarka',toothbrush:'Szczoteczka',remote:'Pilot','dining table':'Stół',refrigerator:'Lodówka',microwave:'Mikrofalówka',oven:'Piekarnik',sink:'Zlew',skateboard:'Deskorolka','sports ball':'Piłka','wine glass':'Kieliszek','stop sign':'Stop'};
-const colorMap = {};
-let ci = 0;
+const COLORS=['#00ff9d','#00c8ff','#ff3d7f','#ffd700','#a78bfa','#fb923c','#34d399','#f472b6','#60a5fa','#2dd4bf','#4ade80','#c084fc'];
+const PL={person:'Osoba',bicycle:'Rower',car:'Samochód',motorcycle:'Motor',airplane:'Samolot',bus:'Autobus',train:'Pociąg',truck:'Ciężarówka',boat:'Łódź','traffic light':'Sygnalizacja',bench:'Ławka',bird:'Ptak',cat:'Kot',dog:'Pies',horse:'Koń',sheep:'Owca',cow:'Krowa',elephant:'Słoń',bear:'Niedźwiedź',zebra:'Zebra',giraffe:'Żyrafa',backpack:'Plecak',umbrella:'Parasol',handbag:'Torebka',tie:'Krawat',suitcase:'Walizka',bottle:'Butelka',cup:'Kubek',fork:'Widelec',knife:'Nóż',spoon:'Łyżka',bowl:'Miska',banana:'Banan',apple:'Jabłko',sandwich:'Kanapka',orange:'Pomarańcza',pizza:'Pizza',donut:'Pączek',cake:'Tort',chair:'Krzesło',couch:'Sofa','potted plant':'Roślina',bed:'Łóżko',toilet:'Toaleta',tv:'Telewizor',laptop:'Laptop',mouse:'Mysz',keyboard:'Klawiatura','cell phone':'Telefon',book:'Książka',clock:'Zegar',vase:'Wazon',scissors:'Nożyczki','teddy bear':'Miś','hair drier':'Suszarka',toothbrush:'Szczoteczka',remote:'Pilot','dining table':'Stół',refrigerator:'Lodówka',microwave:'Mikrofalówka',oven:'Piekarnik',sink:'Zlew',skateboard:'Deskorolka','sports ball':'Piłka','wine glass':'Kieliszek','stop sign':'Stop'};
+const colorMap={};let ci=0;
 function gc(c){if(!colorMap[c])colorMap[c]=COLORS[ci++%COLORS.length];return colorMap[c];}
 function pl(c){return PL[c]||c;}
 
-let model=null, stream=null, facing='environment', paused=false;
-let currentPreds=[], selectedClass=null;
-let frameCount=0, lastFpsTime=Date.now();
+let model=null,stream=null,facing='environment',paused=false;
+let currentPreds=[],selectedClass=null;
+let frameCount=0,lastFpsTime=Date.now();
+
+// MEMORY: { class -> { maxCount, totalSeen, firstSeen, lastSeen } }
+const memory={};
+
+function saveToMemory(counts){
+  const now=new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  for(const[cls,cnt] of Object.entries(counts)){
+    if(!memory[cls]){
+      memory[cls]={maxCount:cnt,totalSeen:cnt,firstSeen:now,lastSeen:now,frames:1};
+    } else {
+      memory[cls].maxCount=Math.max(memory[cls].maxCount,cnt);
+      memory[cls].totalSeen+=cnt;
+      memory[cls].lastSeen=now;
+      memory[cls].frames++;
+    }
+  }
+  updateMemoryTab();
+}
+
+function updateMemoryTab(){
+  const entries=Object.entries(memory);
+  const badge=document.getElementById('mem-badge');
+  badge.textContent=entries.length>0?`(${entries.length})`:'';
+  document.getElementById('mem-count-lbl').textContent=`${entries.length} ZAPAMIĘTANYCH OBIEKTÓW`;
+
+  const list=document.getElementById('mem-list');
+  if(entries.length===0){
+    list.innerHTML='<div id="mem-empty">Brak zapamiętanych obiektów.<br>Wróć do kamery i wykryj coś!</div>';
+    return;
+  }
+
+  const maxMax=Math.max(...entries.map(([,v])=>v.maxCount));
+  const sorted=entries.sort((a,b)=>b[1].maxCount-a[1].maxCount);
+
+  list.innerHTML=sorted.map(([cls,data])=>{
+    const color=gc(cls);
+    const pct=Math.round(data.maxCount/maxMax*100);
+    return `<div class="mem-item">
+      <div class="mem-dot" style="background:${color};box-shadow:0 0 6px ${color}"></div>
+      <div style="flex:1">
+        <div class="mem-name">${pl(cls)}</div>
+        <div class="mem-bar-bg"><div class="mem-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="mem-seen">Pierwsze: ${data.firstSeen} · Ostatnie: ${data.lastSeen}</div>
+      </div>
+      <div class="mem-stats">
+        <div class="mem-max" style="color:${color}">${data.maxCount}</div>
+        <div class="mem-max-lbl">MAKS</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearMemory(){
+  Object.keys(memory).forEach(k=>delete memory[k]);
+  updateMemoryTab();
+}
 
 // ── START ──
 async function startApp(){
@@ -141,10 +231,12 @@ async function startApp(){
   setLoad('Uzyskiwanie dostępu do kamery...',15);
 
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}}});
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}}
+    });
     const v=document.getElementById('video');
     v.srcObject=stream; await v.play();
-    setLoad('Ładowanie modelu COCO-SSD...',45);
+    setLoad('Ładowanie modelu AI...',45);
   }catch(e){
     loading.classList.remove('show');
     document.getElementById('start-screen').style.display='flex';
@@ -152,21 +244,20 @@ async function startApp(){
   }
 
   try{
-    model=await cocoSsd.load({base:'lite_mobilenet_v2'});
+    // Use full model for better small object detection
+    model=await cocoSsd.load({base:'mobilenet_v2'});
     setLoad('Gotowe!',100);
     await new Promise(r=>setTimeout(r,400));
   }catch(e){ alert('Błąd modelu: '+e.message); return; }
 
   loading.classList.remove('show');
-  document.getElementById('fps').textContent='● AKTYWNY';
-  document.getElementById('fps').style.color='#00ff9d';
+  document.getElementById('fps-label').textContent='● AKTYWNY';
+  document.getElementById('fps-label').style.color='#00ff9d';
 
-  // tap/click handler on canvas
   const canvas=document.getElementById('canvas');
   canvas.style.pointerEvents='auto';
-  canvas.style.cursor='crosshair';
-  canvas.addEventListener('click', onTap);
-  canvas.addEventListener('touchend', e=>{ e.preventDefault(); onTap(e.changedTouches[0]); }, {passive:false});
+  canvas.addEventListener('click',onTap);
+  canvas.addEventListener('touchend',e=>{e.preventDefault();onTap(e.changedTouches[0]);},{passive:false});
 
   renderLoop();
 }
@@ -190,54 +281,59 @@ async function renderLoop(){
     canvas.height=video.videoHeight||canvas.offsetHeight;
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    try{ currentPreds=await model.detect(video); }catch(e){return;}
+    // Detect with low threshold to catch small objects
+    try{ currentPreds=await model.detect(video,20,0.3); }catch(e){return;}
 
     // FPS
     frameCount++;
     const now=Date.now();
     if(now-lastFpsTime>=1000){
-      document.getElementById('fps').textContent=`● ${Math.round(frameCount*1000/(now-lastFpsTime))} FPS`;
+      document.getElementById('fps-label').textContent=`● ${Math.round(frameCount*1000/(now-lastFpsTime))} FPS`;
       frameCount=0; lastFpsTime=now;
     }
 
-    // Count per class
     const counts={};
     for(const p of currentPreds) counts[p.class]=(counts[p.class]||0)+1;
+
+    // Save to memory every frame
+    if(Object.keys(counts).length>0) saveToMemory(counts);
+
     const total=Object.values(counts).reduce((a,b)=>a+b,0);
 
-    // Draw boxes
+    // Draw
     for(const p of currentPreds){
-      const [x,y,w,h]=p.bbox;
+      const[x,y,w,h]=p.bbox;
       const color=gc(p.class);
       const isSel=p.class===selectedClass;
-      ctx.globalAlpha=selectedClass?(isSel?1:0.25):0.85;
+      ctx.globalAlpha=selectedClass?(isSel?1:0.2):0.9;
       ctx.strokeStyle=color;
       ctx.lineWidth=isSel?3:1.5;
       ctx.shadowColor=color; ctx.shadowBlur=isSel?14:3;
       ctx.strokeRect(x,y,w,h);
       ctx.shadowBlur=0;
-      // label bg
+
+      // Label
       const lbl=pl(p.class);
-      const lw=ctx.measureText(lbl).width+36;
-      const ly=y>18?y-18:y+h;
-      ctx.globalAlpha=selectedClass?(isSel?1:0.25):0.85;
+      const conf=Math.round(p.score*100);
+      const fontSize=Math.max(9, Math.min(12, w/8)); // scale label to box size
+      ctx.font=`bold ${fontSize}px monospace`;
+      const lw=ctx.measureText(`${lbl} ${conf}%`).width+8;
+      const lh=fontSize+6;
+      const ly=y>lh?y-lh:y;
       ctx.fillStyle=color;
-      ctx.fillRect(x,ly,lw,16);
+      ctx.fillRect(x,ly,lw,lh);
       ctx.fillStyle='#000';
-      ctx.font='bold 10px monospace';
-      ctx.fillText(`${lbl} ${Math.round(p.score*100)}%`,x+3,ly+12);
+      ctx.globalAlpha=selectedClass?(isSel?1:0.2):0.9;
+      ctx.fillText(`${lbl} ${conf}%`,x+4,ly+lh-3);
       ctx.globalAlpha=1;
     }
 
-    // Update bottom chips
-    updateChips(counts,total);
+    updateLiveUI(counts,total);
 
-    // Update result card if something selected
     if(selectedClass){
       const cnt=counts[selectedClass]||0;
-      document.getElementById('result-big').textContent=cnt;
-      document.getElementById('result-bar-fill').style.width=
-        (total>0?Math.round(cnt/total*100):0)+'%';
+      document.getElementById('result-count').textContent=cnt;
+      document.getElementById('result-bar-fill').style.width=(total>0?Math.round(cnt/total*100):0)+'%';
     }
   }
   frame();
@@ -247,30 +343,22 @@ async function renderLoop(){
 function onTap(e){
   const canvas=document.getElementById('canvas');
   const rect=canvas.getBoundingClientRect();
-  // Convert screen coords → video coords
   const sx=(e.clientX-rect.left)/rect.width;
   const sy=(e.clientY-rect.top)/rect.height;
   const vx=sx*canvas.width;
   const vy=sy*canvas.height;
 
-  // Find which prediction was tapped
-  let best=null, bestArea=Infinity;
+  let best=null,bestArea=Infinity;
   for(const p of currentPreds){
-    const [x,y,w,h]=p.bbox;
+    const[x,y,w,h]=p.bbox;
     if(vx>=x&&vx<=x+w&&vy>=y&&vy<=y+h){
       const area=w*h;
-      if(area<bestArea){ bestArea=area; best=p; }
+      if(area<bestArea){bestArea=area;best=p;}
     }
   }
 
-  if(best){
-    selectClass(best.class);
-    // Hide tap hint
-    document.getElementById('tap-hint').style.opacity='0';
-  } else {
-    // Tapped empty space — deselect
-    clearSelected();
-  }
+  if(best){ selectClass(best.class); document.getElementById('tap-hint').style.opacity='0'; }
+  else clearSelected();
 }
 
 function selectClass(cls){
@@ -283,38 +371,36 @@ function selectClass(cls){
 
   document.getElementById('result-name').textContent=pl(cls).toUpperCase();
   document.getElementById('result-name').style.color=color;
-  document.getElementById('result-big').textContent=cnt;
-  document.getElementById('result-big').style.color=color;
+  document.getElementById('result-count').textContent=cnt;
+  document.getElementById('result-count').style.color=color;
   document.getElementById('result-bar-fill').style.background=color;
   document.getElementById('result-bar-fill').style.width=(total>0?Math.round(cnt/total*100):0)+'%';
 
-  // Other objects
   const others=Object.entries(counts).filter(([c])=>c!==cls).sort((a,b)=>b[1]-a[1]);
   document.getElementById('result-others').innerHTML=others.map(([c,n])=>
-    `<span class="other-tag" style="color:${gc(c)};border-color:${gc(c)}44;background:${gc(c)}11">${pl(c)} ×${n}</span>`
+    `<span class="other-chip" style="color:${gc(c)};border-color:${gc(c)}44;background:${gc(c)}11">${pl(c)} ×${n}</span>`
   ).join('');
 
   document.getElementById('result-card').classList.add('show');
-  updateChips(counts,total);
+  updateLiveUI(counts,total);
 }
 
-function closeResult(){ clearSelected(); }
 function clearSelected(){
   selectedClass=null;
   document.getElementById('result-card').classList.remove('show');
 }
 
-function updateChips(counts,total){
+function updateLiveUI(counts,total){
   document.getElementById('total-num').textContent=total;
-  const row=document.getElementById('counts-row');
+  const row=document.getElementById('live-chips');
   if(Object.keys(counts).length===0){
     row.innerHTML='<span style="font-size:0.6rem;color:#222">Brak wykrytych obiektów</span>';
     return;
   }
   row.innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([cls,cnt])=>{
     const color=gc(cls);
-    const active=cls===selectedClass?' active':'';
-    return `<div class="count-chip${active}" style="color:${color};border-color:${color}55;background:${color}15"
+    const sel=cls===selectedClass?' sel':'';
+    return `<div class="live-chip${sel}" style="color:${color};border-color:${color}55;background:${color}15"
       onclick="selectClass('${cls}')">${pl(cls)} <strong>×${cnt}</strong></div>`;
   }).join('');
 }
@@ -331,7 +417,13 @@ async function switchCam(){
 
 function togglePause(){
   paused=!paused;
-  document.getElementById('pause-btn').textContent=paused?'▶ WZNÓW':'⏸ PAUSE';
+  document.getElementById('pause-btn').textContent=paused?'▶ WZNÓW':'⏸ PAUZA';
+}
+
+function showTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='camera'?0:1)));
+  document.getElementById('view-camera').style.display=tab==='camera'?'flex':'none';
+  document.getElementById('view-memory').style.display=tab==='memory'?'flex':'none';
 }
 </script>
 </body>
