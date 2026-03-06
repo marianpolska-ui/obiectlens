@@ -7,377 +7,331 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: #0a0a0f; color: #fff;
-  font-family: monospace; height: 100vh;
-  display: flex; flex-direction: column; overflow: hidden;
-}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:#0a0a0f; color:#fff; font-family:monospace; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-#header {
-  padding: 10px 16px; background: #12121a;
-  border-bottom: 1px solid #222;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-shrink: 0;
-}
-#header h1 { font-size: 1.1rem; color: #00ff9d; letter-spacing: 3px; }
-#status { font-size: 0.6rem; color: #555; }
-#status.on { color: #00ff9d; }
+#header { padding:10px 16px; background:#12121a; border-bottom:1px solid #1e1e2e; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+#header h1 { font-size:1rem; color:#00ff9d; letter-spacing:3px; }
+#fps { font-size:0.6rem; color:#333; }
 
-#cam-wrap {
-  position: relative; flex: 1; background: #000; overflow: hidden;
-}
-video { width: 100%; height: 100%; object-fit: cover; display: block; }
-#canvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-}
+#cam-wrap { position:relative; flex:1; background:#000; overflow:hidden; touch-action:none; }
+#video { width:100%; height:100%; object-fit:cover; display:block; }
+#canvas { position:absolute; inset:0; width:100%; height:100%; }
 
 /* Start screen */
-#start-screen {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 20px; background: rgba(0,0,0,0.92); z-index: 10;
-}
-#start-screen .icon { font-size: 3.5rem; }
-#start-btn {
-  background: #00ff9d; color: #000; border: none;
-  padding: 14px 36px; font-family: monospace;
-  font-size: 1rem; font-weight: bold;
-  letter-spacing: 3px; cursor: pointer; border-radius: 4px;
-}
-#start-screen p { font-size: 0.7rem; color: #555; text-align: center; line-height: 1.8; }
+#start-screen { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:rgba(0,0,0,0.93); z-index:20; }
+#start-btn { background:#00ff9d; color:#000; border:none; padding:14px 36px; font-family:monospace; font-size:1rem; font-weight:bold; letter-spacing:3px; cursor:pointer; border-radius:4px; }
+#start-screen p { font-size:0.68rem; color:#444; text-align:center; line-height:1.9; }
 
-/* Loading screen */
-#loading-screen {
-  position: absolute; inset: 0;
-  display: none; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 20px; background: rgba(0,0,0,0.95); z-index: 10;
-}
-#loading-screen.active { display: flex; }
-#loading-title { font-size: 1rem; color: #00ff9d; letter-spacing: 3px; }
-#loading-bar-wrap {
-  width: 260px; height: 4px;
-  background: #222; border-radius: 2px; overflow: hidden;
-}
-#loading-bar {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, #00ff9d, #00c8ff);
-  border-radius: 2px; transition: width 0.3s;
-  box-shadow: 0 0 8px #00ff9d;
-}
-#loading-msg { font-size: 0.65rem; color: #555; letter-spacing: 1px; }
+/* Loading */
+#loading { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:rgba(0,0,0,0.96); z-index:20; }
+#loading.show { display:flex; }
+#load-title { font-size:0.9rem; color:#00ff9d; letter-spacing:3px; }
+#load-bar-bg { width:240px; height:3px; background:#1a1a2e; border-radius:2px; overflow:hidden; }
+#load-bar { height:100%; width:0%; background:linear-gradient(90deg,#00ff9d,#00c8ff); transition:width 0.3s; }
+#load-msg { font-size:0.6rem; color:#444; letter-spacing:1px; }
 
-/* Selected object banner */
-#selected-banner {
-  position: absolute; top: 12px; left: 12px; right: 12px;
-  display: none; align-items: center; justify-content: space-between;
-  background: rgba(0,0,0,0.85); border: 1px solid #00ff9d;
-  border-radius: 6px; padding: 8px 14px; z-index: 5;
-}
-#selected-banner.active { display: flex; }
-#selected-name { color: #00ff9d; font-size: 0.85rem; font-weight: bold; letter-spacing: 1px; }
-#selected-count-wrap { text-align: right; }
-#selected-count { font-size: 2rem; font-weight: bold; color: #fff; line-height: 1; }
-#selected-sub { font-size: 0.55rem; color: #555; }
-#clear-btn {
-  background: none; border: 1px solid #333; color: #555;
-  padding: 4px 8px; font-family: monospace; font-size: 0.6rem;
-  cursor: pointer; border-radius: 3px; margin-left: 10px;
-}
+/* Tap hint */
+#tap-hint { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); border:1px solid #222; color:#555; padding:6px 16px; font-size:0.65rem; letter-spacing:1px; border-radius:20px; white-space:nowrap; pointer-events:none; transition:opacity 0.5s; }
+
+/* Result card */
+#result-card { position:absolute; top:12px; left:12px; right:12px; background:rgba(5,5,12,0.95); border-radius:8px; padding:14px 16px; z-index:10; display:none; border:1px solid #1e1e2e; }
+#result-card.show { display:block; animation:slideDown 0.25s ease; }
+@keyframes slideDown { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
+#result-header { display:flex; justify-content:space-between; align-items:flex-start; }
+#result-left {}
+#result-label { font-size:0.55rem; color:#444; letter-spacing:2px; margin-bottom:3px; }
+#result-name { font-size:1.1rem; font-weight:bold; }
+#result-right { text-align:right; }
+#result-big { font-size:3rem; font-weight:bold; line-height:1; }
+#result-big-label { font-size:0.55rem; color:#444; letter-spacing:1px; }
+#result-close { position:absolute; top:8px; right:10px; background:none; border:none; color:#333; font-size:1rem; cursor:pointer; padding:4px; }
+#result-bar { margin-top:10px; height:3px; background:#1a1a2e; border-radius:2px; overflow:hidden; }
+#result-bar-fill { height:100%; border-radius:2px; transition:width 0.4s; }
+#result-others { margin-top:10px; display:flex; flex-wrap:wrap; gap:5px; }
+.other-tag { font-size:0.65rem; padding:3px 9px; border-radius:12px; border:1px solid; }
 
 /* Bottom */
-#bottom {
-  background: #12121a; border-top: 1px solid #222;
-  padding: 10px 16px; flex-shrink: 0;
-}
-#objects-row {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  min-height: 32px; align-items: center;
-}
-.obj-chip {
-  padding: 4px 12px; border-radius: 20px;
-  font-size: 0.72rem; font-weight: bold;
-  cursor: pointer; border: 2px solid transparent;
-  transition: all 0.15s; white-space: nowrap;
-}
-.obj-chip:active { transform: scale(0.95); }
-.obj-chip.selected { border-color: #fff !important; }
-#empty-hint { font-size: 0.65rem; color: #333; }
-
-#total-row {
-  display: flex; justify-content: space-between;
-  align-items: center; margin-top: 8px;
-  border-top: 1px solid #1a1a1a; padding-top: 8px;
-}
-#total-label { font-size: 0.6rem; color: #555; letter-spacing: 1px; }
-#total-num { font-size: 1.4rem; font-weight: bold; color: #00ff9d; }
-
-#controls { display: flex; gap: 8px; margin-top: 8px; }
-button.ctrl {
-  flex: 1; padding: 7px; border: 1px solid #2a2a2a;
-  background: transparent; color: #666;
-  font-family: monospace; font-size: 0.65rem;
-  letter-spacing: 1px; cursor: pointer; border-radius: 3px;
-}
-button.ctrl:active { background: #1a1a1a; }
+#bottom { background:#12121a; border-top:1px solid #1e1e2e; padding:10px 14px; flex-shrink:0; }
+#counts-row { display:flex; gap:5px; flex-wrap:wrap; min-height:28px; align-items:center; }
+.count-chip { padding:3px 10px; border-radius:12px; font-size:0.68rem; font-weight:bold; border:1.5px solid; cursor:pointer; transition:all 0.15s; }
+.count-chip.active { filter:brightness(1.5); transform:scale(1.05); }
+#bottom-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid #111; }
+#total-wrap { display:flex; align-items:baseline; gap:8px; }
+#total-num { font-size:1.6rem; font-weight:bold; color:#00ff9d; line-height:1; }
+#total-lbl { font-size:0.55rem; color:#333; letter-spacing:1px; }
+#btn-row { display:flex; gap:6px; }
+.btn-sm { padding:6px 12px; border:1px solid #2a2a2a; background:transparent; color:#555; font-family:monospace; font-size:0.6rem; letter-spacing:1px; cursor:pointer; border-radius:3px; }
+.btn-sm:active { background:#1a1a1a; }
 </style>
 </head>
 <body>
 
 <div id="header">
   <h1>OBJECTLENS</h1>
-  <span id="status">● OFFLINE</span>
+  <span id="fps">● OFFLINE</span>
 </div>
 
-<div id="cam-wrap">
+<div id="cam-wrap" id="cam">
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
 
+  <div id="tap-hint">👆 DOTKNIJ OBIEKT ABY GO POLICZYĆ</div>
+
+  <div id="result-card">
+    <button id="result-close" onclick="closeResult()">✕</button>
+    <div id="result-header">
+      <div id="result-left">
+        <div id="result-label">WYBRANY OBIEKT</div>
+        <div id="result-name">—</div>
+      </div>
+      <div id="result-right">
+        <div id="result-big">0</div>
+        <div id="result-big-label">W KADRZE</div>
+      </div>
+    </div>
+    <div id="result-bar"><div id="result-bar-fill"></div></div>
+    <div id="result-others"></div>
+  </div>
+
+  <div id="loading">
+    <div id="load-title">ŁADOWANIE AI</div>
+    <div id="load-bar-bg"><div id="load-bar"></div></div>
+    <div id="load-msg">Proszę czekać...</div>
+  </div>
+
   <div id="start-screen">
-    <div class="icon">📷</div>
+    <div style="font-size:3rem">📷</div>
     <button id="start-btn" onclick="startApp()">URUCHOM KAMERĘ</button>
-    <p>Detekcja obiektów działa lokalnie<br>bez połączenia z internetem</p>
-  </div>
-
-  <div id="loading-screen">
-    <div id="loading-title">ŁADOWANIE AI</div>
-    <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
-    <div id="loading-msg">Inicjalizacja...</div>
-  </div>
-
-  <div id="selected-banner">
-    <div>
-      <div style="font-size:0.55rem;color:#555;letter-spacing:1px;margin-bottom:2px">WYBRANY OBIEKT</div>
-      <div id="selected-name">—</div>
-    </div>
-    <div id="selected-count-wrap">
-      <div id="selected-count">0</div>
-      <div id="selected-sub">w kadrze</div>
-    </div>
-    <button id="clear-btn" onclick="clearSelected()">✕ WYCZYŚĆ</button>
+    <p>Kamera + detekcja AI działa lokalnie<br>Dotknij obiekt na ekranie aby go policzyć</p>
   </div>
 </div>
 
 <div id="bottom">
-  <div id="objects-row">
-    <span id="empty-hint">Uruchom kamerę aby wykryć obiekty...</span>
-  </div>
-  <div id="total-row">
-    <span id="total-label">WSZYSTKICH OBIEKTÓW</span>
-    <span id="total-num">0</span>
-  </div>
-  <div id="controls">
-    <button class="ctrl" onclick="switchCam()">⟳ KAMERA</button>
-    <button class="ctrl" onclick="togglePause()" id="pause-btn">⏸ PAUZA</button>
+  <div id="counts-row"><span style="font-size:0.6rem;color:#222">Uruchom kamerę...</span></div>
+  <div id="bottom-footer">
+    <div id="total-wrap">
+      <span id="total-num">0</span>
+      <span id="total-lbl">OBIEKTÓW ŁĄCZNIE</span>
+    </div>
+    <div id="btn-row">
+      <button class="btn-sm" onclick="switchCam()">⟳ CAM</button>
+      <button class="btn-sm" onclick="togglePause()" id="pause-btn">⏸ PAUSE</button>
+    </div>
   </div>
 </div>
 
 <script>
-const COLORS = [
-  '#00ff9d','#00c8ff','#ff3d7f','#ffd700','#a78bfa',
-  '#fb923c','#34d399','#f472b6','#60a5fa','#2dd4bf'
-];
-const PL = {
-  person:'Osoba', bicycle:'Rower', car:'Samochód', motorcycle:'Motor',
-  airplane:'Samolot', bus:'Autobus', train:'Pociąg', truck:'Ciężarówka',
-  boat:'Łódź', 'traffic light':'Sygnalizacja', bench:'Ławka',
-  bird:'Ptak', cat:'Kot', dog:'Pies', horse:'Koń', sheep:'Owca',
-  cow:'Krowa', elephant:'Słoń', bear:'Niedźwiedź', zebra:'Zebra',
-  giraffe:'Żyrafa', backpack:'Plecak', umbrella:'Parasol',
-  handbag:'Torebka', tie:'Krawat', suitcase:'Walizka',
-  bottle:'Butelka', cup:'Kubek', fork:'Widelec', knife:'Nóż',
-  spoon:'Łyżka', bowl:'Miska', banana:'Banan', apple:'Jabłko',
-  sandwich:'Kanapka', orange:'Pomarańcza', pizza:'Pizza',
-  donut:'Pączek', cake:'Tort', chair:'Krzesło', couch:'Sofa',
-  'potted plant':'Roślina', bed:'Łóżko', toilet:'Toaleta',
-  tv:'Telewizor', laptop:'Laptop', mouse:'Mysz', keyboard:'Klawiatura',
-  'cell phone':'Telefon', book:'Książka', clock:'Zegar',
-  vase:'Wazon', scissors:'Nożyczki', 'teddy bear':'Miś',
-  'hair drier':'Suszarka', toothbrush:'Szczoteczka', remote:'Pilot',
-  'dining table':'Stół', refrigerator:'Lodówka', microwave:'Mikrofalówka',
-  oven:'Piekarnik', sink:'Zlew', skateboard:'Deskorolka',
-  'sports ball':'Piłka', 'wine glass':'Kieliszek', 'stop sign':'Stop'
-};
-
+const COLORS = ['#00ff9d','#00c8ff','#ff3d7f','#ffd700','#a78bfa','#fb923c','#34d399','#f472b6','#60a5fa','#2dd4bf'];
+const PL = {person:'Osoba',bicycle:'Rower',car:'Samochód',motorcycle:'Motor',airplane:'Samolot',bus:'Autobus',train:'Pociąg',truck:'Ciężarówka',boat:'Łódź','traffic light':'Sygnalizacja',bench:'Ławka',bird:'Ptak',cat:'Kot',dog:'Pies',horse:'Koń',sheep:'Owca',cow:'Krowa',elephant:'Słoń',bear:'Niedźwiedź',zebra:'Zebra',giraffe:'Żyrafa',backpack:'Plecak',umbrella:'Parasol',handbag:'Torebka',tie:'Krawat',suitcase:'Walizka',bottle:'Butelka',cup:'Kubek',fork:'Widelec',knife:'Nóż',spoon:'Łyżka',bowl:'Miska',banana:'Banan',apple:'Jabłko',sandwich:'Kanapka',orange:'Pomarańcza',pizza:'Pizza',donut:'Pączek',cake:'Tort',chair:'Krzesło',couch:'Sofa','potted plant':'Roślina',bed:'Łóżko',toilet:'Toaleta',tv:'Telewizor',laptop:'Laptop',mouse:'Mysz',keyboard:'Klawiatura','cell phone':'Telefon',book:'Książka',clock:'Zegar',vase:'Wazon',scissors:'Nożyczki','teddy bear':'Miś','hair drier':'Suszarka',toothbrush:'Szczoteczka',remote:'Pilot','dining table':'Stół',refrigerator:'Lodówka',microwave:'Mikrofalówka',oven:'Piekarnik',sink:'Zlew',skateboard:'Deskorolka','sports ball':'Piłka','wine glass':'Kieliszek','stop sign':'Stop'};
 const colorMap = {};
 let ci = 0;
-function getColor(cls) {
-  if (!colorMap[cls]) colorMap[cls] = COLORS[ci++ % COLORS.length];
-  return colorMap[cls];
-}
-function pl(cls) { return PL[cls] || cls; }
+function gc(c){if(!colorMap[c])colorMap[c]=COLORS[ci++%COLORS.length];return colorMap[c];}
+function pl(c){return PL[c]||c;}
 
-let model = null;
-let stream = null;
-let facing = 'environment';
-let paused = false;
-let rafId = null;
-let selectedClass = null;
-let lastDetections = [];
+let model=null, stream=null, facing='environment', paused=false;
+let currentPreds=[], selectedClass=null;
+let frameCount=0, lastFpsTime=Date.now();
 
-async function startApp() {
-  document.getElementById('start-screen').style.display = 'none';
-  document.getElementById('loading-screen').classList.add('active');
-  setLoadingMsg('Uzyskiwanie dostępu do kamery...', 10);
+// ── START ──
+async function startApp(){
+  document.getElementById('start-screen').style.display='none';
+  const loading=document.getElementById('loading');
+  loading.classList.add('show');
+  setLoad('Uzyskiwanie dostępu do kamery...',15);
 
-  // Start camera
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    const video = document.getElementById('video');
-    video.srcObject = stream;
-    await video.play();
-    setLoadingMsg('Ładowanie modelu AI...', 40);
-  } catch(e) {
-    document.getElementById('loading-screen').classList.remove('active');
-    document.getElementById('start-screen').style.display = 'flex';
-    alert('Błąd kamery: ' + e.message);
-    return;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}}});
+    const v=document.getElementById('video');
+    v.srcObject=stream; await v.play();
+    setLoad('Ładowanie modelu COCO-SSD...',45);
+  }catch(e){
+    loading.classList.remove('show');
+    document.getElementById('start-screen').style.display='flex';
+    alert('Błąd kamery: '+e.message); return;
   }
 
-  // Load model
-  try {
-    setLoadingMsg('Pobieranie COCO-SSD...', 55);
-    model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
-    setLoadingMsg('Gotowe!', 100);
-    await new Promise(r => setTimeout(r, 400));
-  } catch(e) {
-    alert('Błąd modelu: ' + e.message);
-    return;
-  }
+  try{
+    model=await cocoSsd.load({base:'lite_mobilenet_v2'});
+    setLoad('Gotowe!',100);
+    await new Promise(r=>setTimeout(r,400));
+  }catch(e){ alert('Błąd modelu: '+e.message); return; }
 
-  document.getElementById('loading-screen').classList.remove('active');
-  document.getElementById('status').textContent = '● AKTYWNY';
-  document.getElementById('status').className = 'on';
-  detect();
+  loading.classList.remove('show');
+  document.getElementById('fps').textContent='● AKTYWNY';
+  document.getElementById('fps').style.color='#00ff9d';
+
+  // tap/click handler on canvas
+  const canvas=document.getElementById('canvas');
+  canvas.style.pointerEvents='auto';
+  canvas.style.cursor='crosshair';
+  canvas.addEventListener('click', onTap);
+  canvas.addEventListener('touchend', e=>{ e.preventDefault(); onTap(e.changedTouches[0]); }, {passive:false});
+
+  renderLoop();
 }
 
-function setLoadingMsg(msg, pct) {
-  document.getElementById('loading-msg').textContent = msg;
-  document.getElementById('loading-bar').style.width = pct + '%';
+function setLoad(msg,pct){
+  document.getElementById('load-msg').textContent=msg;
+  document.getElementById('load-bar').style.width=pct+'%';
 }
 
-async function detect() {
-  if (!model) return;
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+// ── RENDER LOOP ──
+async function renderLoop(){
+  const video=document.getElementById('video');
+  const canvas=document.getElementById('canvas');
+  const ctx=canvas.getContext('2d');
 
-  async function frame() {
-    rafId = requestAnimationFrame(frame);
-    if (paused || video.readyState < 2) return;
+  async function frame(){
+    requestAnimationFrame(frame);
+    if(paused||video.readyState<2)return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.width=video.videoWidth||canvas.offsetWidth;
+    canvas.height=video.videoHeight||canvas.offsetHeight;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    let preds = [];
-    try { preds = await model.detect(video); } catch(e) { return; }
-    lastDetections = preds;
+    try{ currentPreds=await model.detect(video); }catch(e){return;}
 
-    // Count
-    const counts = {};
-    for (const p of preds) {
-      counts[p.class] = (counts[p.class] || 0) + 1;
+    // FPS
+    frameCount++;
+    const now=Date.now();
+    if(now-lastFpsTime>=1000){
+      document.getElementById('fps').textContent=`● ${Math.round(frameCount*1000/(now-lastFpsTime))} FPS`;
+      frameCount=0; lastFpsTime=now;
     }
+
+    // Count per class
+    const counts={};
+    for(const p of currentPreds) counts[p.class]=(counts[p.class]||0)+1;
+    const total=Object.values(counts).reduce((a,b)=>a+b,0);
 
     // Draw boxes
-    for (const p of preds) {
-      const [x, y, w, h] = p.bbox;
-      const color = getColor(p.class);
-      const isSelected = p.class === selectedClass;
-      const alpha = selectedClass ? (isSelected ? 1 : 0.3) : 1;
-
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = isSelected ? 3 : 1.5;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = isSelected ? 12 : 4;
-      ctx.strokeRect(x, y, w, h);
-      ctx.shadowBlur = 0;
-
-      // Label
-      const name = pl(p.class);
-      const conf = Math.round(p.score * 100);
-      ctx.fillStyle = color;
-      const lw = name.length * 8 + 40;
-      const ly = y > 20 ? y - 20 : y;
-      ctx.fillRect(x, ly, lw, 18);
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 11px monospace';
-      ctx.fillText(`${name} ${conf}%`, x + 4, ly + 13);
-      ctx.globalAlpha = 1;
+    for(const p of currentPreds){
+      const [x,y,w,h]=p.bbox;
+      const color=gc(p.class);
+      const isSel=p.class===selectedClass;
+      ctx.globalAlpha=selectedClass?(isSel?1:0.25):0.85;
+      ctx.strokeStyle=color;
+      ctx.lineWidth=isSel?3:1.5;
+      ctx.shadowColor=color; ctx.shadowBlur=isSel?14:3;
+      ctx.strokeRect(x,y,w,h);
+      ctx.shadowBlur=0;
+      // label bg
+      const lbl=pl(p.class);
+      const lw=ctx.measureText(lbl).width+36;
+      const ly=y>18?y-18:y+h;
+      ctx.globalAlpha=selectedClass?(isSel?1:0.25):0.85;
+      ctx.fillStyle=color;
+      ctx.fillRect(x,ly,lw,16);
+      ctx.fillStyle='#000';
+      ctx.font='bold 10px monospace';
+      ctx.fillText(`${lbl} ${Math.round(p.score*100)}%`,x+3,ly+12);
+      ctx.globalAlpha=1;
     }
 
-    // Update UI
-    updateUI(counts);
+    // Update bottom chips
+    updateChips(counts,total);
+
+    // Update result card if something selected
+    if(selectedClass){
+      const cnt=counts[selectedClass]||0;
+      document.getElementById('result-big').textContent=cnt;
+      document.getElementById('result-bar-fill').style.width=
+        (total>0?Math.round(cnt/total*100):0)+'%';
+    }
   }
   frame();
 }
 
-function updateUI(counts) {
-  const total = Object.values(counts).reduce((a,b)=>a+b,0);
-  document.getElementById('total-num').textContent = total;
+// ── TAP ──
+function onTap(e){
+  const canvas=document.getElementById('canvas');
+  const rect=canvas.getBoundingClientRect();
+  // Convert screen coords → video coords
+  const sx=(e.clientX-rect.left)/rect.width;
+  const sy=(e.clientY-rect.top)/rect.height;
+  const vx=sx*canvas.width;
+  const vy=sy*canvas.height;
 
-  // Chips
-  const row = document.getElementById('objects-row');
-  if (Object.keys(counts).length === 0) {
-    row.innerHTML = '<span id="empty-hint" style="font-size:0.65rem;color:#333">Brak wykrytych obiektów...</span>';
+  // Find which prediction was tapped
+  let best=null, bestArea=Infinity;
+  for(const p of currentPreds){
+    const [x,y,w,h]=p.bbox;
+    if(vx>=x&&vx<=x+w&&vy>=y&&vy<=y+h){
+      const area=w*h;
+      if(area<bestArea){ bestArea=area; best=p; }
+    }
+  }
+
+  if(best){
+    selectClass(best.class);
+    // Hide tap hint
+    document.getElementById('tap-hint').style.opacity='0';
   } else {
-    const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-    row.innerHTML = sorted.map(([cls, cnt]) => {
-      const color = getColor(cls);
-      const sel = cls === selectedClass ? ' selected' : '';
-      return `<div class="obj-chip${sel}"
-        style="background:${color}22;color:${color};border-color:${color}44"
-        onclick="selectObject('${cls}')">
-        ${pl(cls)} <strong>×${cnt}</strong>
-      </div>`;
-    }).join('');
-  }
-
-  // Selected banner
-  if (selectedClass) {
-    const cnt = counts[selectedClass] || 0;
-    document.getElementById('selected-name').textContent = pl(selectedClass).toUpperCase();
-    document.getElementById('selected-count').textContent = cnt;
-    document.getElementById('selected-banner').classList.add('active');
-  }
-}
-
-function selectObject(cls) {
-  if (selectedClass === cls) {
+    // Tapped empty space — deselect
     clearSelected();
-  } else {
-    selectedClass = cls;
-    document.getElementById('selected-banner').classList.add('active');
-    document.getElementById('selected-name').textContent = pl(cls).toUpperCase();
   }
 }
 
-function clearSelected() {
-  selectedClass = null;
-  document.getElementById('selected-banner').classList.remove('active');
+function selectClass(cls){
+  selectedClass=cls;
+  const color=gc(cls);
+  const counts={};
+  for(const p of currentPreds) counts[p.class]=(counts[p.class]||0)+1;
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const cnt=counts[cls]||0;
+
+  document.getElementById('result-name').textContent=pl(cls).toUpperCase();
+  document.getElementById('result-name').style.color=color;
+  document.getElementById('result-big').textContent=cnt;
+  document.getElementById('result-big').style.color=color;
+  document.getElementById('result-bar-fill').style.background=color;
+  document.getElementById('result-bar-fill').style.width=(total>0?Math.round(cnt/total*100):0)+'%';
+
+  // Other objects
+  const others=Object.entries(counts).filter(([c])=>c!==cls).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('result-others').innerHTML=others.map(([c,n])=>
+    `<span class="other-tag" style="color:${gc(c)};border-color:${gc(c)}44;background:${gc(c)}11">${pl(c)} ×${n}</span>`
+  ).join('');
+
+  document.getElementById('result-card').classList.add('show');
+  updateChips(counts,total);
 }
 
-async function switchCam() {
-  if (!stream) return;
-  facing = facing === 'environment' ? 'user' : 'environment';
-  stream.getTracks().forEach(t => t.stop());
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
-    document.getElementById('video').srcObject = stream;
-  } catch(e) { alert('Błąd: ' + e.message); }
+function closeResult(){ clearSelected(); }
+function clearSelected(){
+  selectedClass=null;
+  document.getElementById('result-card').classList.remove('show');
 }
 
-function togglePause() {
-  paused = !paused;
-  document.getElementById('pause-btn').textContent = paused ? '▶ WZNÓW' : '⏸ PAUZA';
+function updateChips(counts,total){
+  document.getElementById('total-num').textContent=total;
+  const row=document.getElementById('counts-row');
+  if(Object.keys(counts).length===0){
+    row.innerHTML='<span style="font-size:0.6rem;color:#222">Brak wykrytych obiektów</span>';
+    return;
+  }
+  row.innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([cls,cnt])=>{
+    const color=gc(cls);
+    const active=cls===selectedClass?' active':'';
+    return `<div class="count-chip${active}" style="color:${color};border-color:${color}55;background:${color}15"
+      onclick="selectClass('${cls}')">${pl(cls)} <strong>×${cnt}</strong></div>`;
+  }).join('');
+}
+
+async function switchCam(){
+  if(!stream)return;
+  facing=facing==='environment'?'user':'environment';
+  stream.getTracks().forEach(t=>t.stop());
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing}});
+    document.getElementById('video').srcObject=stream;
+  }catch(e){alert('Błąd: '+e.message);}
+}
+
+function togglePause(){
+  paused=!paused;
+  document.getElementById('pause-btn').textContent=paused?'▶ WZNÓW':'⏸ PAUSE';
 }
 </script>
 </body>
