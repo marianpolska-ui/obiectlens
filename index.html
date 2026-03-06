@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Licznik Obiektów AI</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background:#000;
+  color:#fff;
+  font-family: 'Courier New', monospace;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+#header {
+  background: rgba(0,0,0,0.9);
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  border-bottom: 1px solid #1a1a1a;
+  z-index: 100;
+}
+#header h1 { font-size: 1rem; color: #00ff9d; letter-spacing: 3px; }
+#hdr-status { font-size: 0.6rem; color: #444; }
+#hdr-status.on { color: #00ff9d; }
+
+/* ── VIDEO LAYER ── */
+#video-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #000;
+}
+
+#video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── START SCREEN ── */
+#start-screen {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 50;
+}
+#start-screen p { font-size: 0.75rem; color: #555; text-align: center; line-height: 1.8; }
+#btn-start {
+  background: #00ff9d;
+  color: #000;
+  border: none;
+  padding: 16px 40px;
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 30px rgba(0,255,157,0.4);
+}
+
+/* ── SCAN ANIMATION ── */
+#scan-anim {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+#scan-anim.show { display: block; }
+#scan-line-el {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ff9d, transparent);
+  box-shadow: 0 0 12px #00ff9d;
+  animation: scanDown 1.2s linear infinite;
+}
+@keyframes scanDown { from { top: 0; } to { top: 100%; } }
+
+#scan-border {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(0,255,157,0.4);
+  animation: borderPulse 0.6s ease infinite alternate;
+}
+@keyframes borderPulse {
+  from { border-color: rgba(0,255,157,0.2); }
+  to   { border-color: rgba(0,255,157,0.7); }
+}
+
+#scan-badge {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid #00ff9d;
+  color: #00ff9d;
+  padding: 5px 16px;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* ── DETECTED TAGS (live on video) ── */
+#live-tags {
+  position: absolute;
+  top: 10px; left: 10px; right: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 15;
+  pointer-events: none;
+}
+.live-tag {
+  background: rgba(0,0,0,0.75);
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: pointer;
+  pointer-events: all;
+  transition: transform 0.1s;
+}
+.live-tag:active { transform: scale(0.95); }
+.live-tag.selected {
+  box-shadow: 0 0 12px currentColor;
+  transform: scale(1.05);
+}
+
+/* ── RESULT CARD ── */
+#result-card {
+  display: none;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(8,8,12,0.97);
+  border-top: 1px solid #00ff9d;
+  padding: 16px 20px 20px;
+  z-index: 30;
+  animation: slideUp 0.25s ease;
+}
+#result-card.show { display: block; }
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+#result-card-close {
+  position: absolute;
+  top: 10px; right: 16px;
+  background: none; border: none;
+  color: #444; font-size: 1.3rem; cursor: pointer;
+  padding: 4px 8px;
+}
+#result-label { font-size: 0.55rem; color: #444; letter-spacing: 2px; margin-bottom: 6px; }
+#result-name { font-size: 1rem; color: #00ff9d; font-weight: bold; margin-bottom: 2px; }
+#result-number { font-size: 4rem; font-weight: bold; line-height: 1; color: #fff; }
+#result-desc { font-size: 0.65rem; color: #555; margin-top: 4px; }
+#result-others { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.other-tag {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid #333;
+  color: #888;
+  padding: 3px 10px;
+  font-size: 0.65rem;
+  border-radius: 3px;
+}
+
+/* ── BOTTOM BAR ── */
+#bottom {
+  background: rgba(0,0,0,0.95);
+  border-top: 1px solid #1a1a1a;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#bottom-hint {
+  flex: 1;
+  font-size: 0.65rem;
+  color: #444;
+  line-height: 1.5;
+}
+#bottom-hint b { color: #00ff9d; }
+.btn-sm {
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.btn-sm:active { background: #1a1a1a; }
+
+/* ── RIPPLE ── */
+.tap-ripple {
+  position: absolute;
+  width: 70px; height: 70px;
+  border: 2px solid #00ff9d;
+  border-radius: 50%;
+  transform: translate(-50%,-50%) scale(0);
+  animation: rippleAnim 0.5s ease-out forwards;
+  pointer-events: none;
+  z-index: 25;
+}
+@keyframes rippleAnim {
+  to { transform: translate(-50%,-50%) scale(2.5); opacity: 0; }
+}
+
+/* hidden canvas */
+#cap { display: none; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>OBJECTLENS</h1>
+  <span id="hdr-status">● OFFLINE</span>
+</div>
+
+<div id="video-wrap" id="video-wrap">
+  <video id="video" autoplay muted playsinline></video>
+
+  <!-- Live object tags -->
+  <div id="live-tags"></div>
+
+  <!-- Scan animation -->
+  <div id="scan-anim">
+    <div id="scan-border"></div>
+    <div id="scan-line-el"></div>
+    <div id="scan-badge">● SKANOWANIE KADRU...</div>
+  </div>
+
+  <!-- Result card -->
+  <div id="result-card">
+    <button id="result-card-close" onclick="closeResult()">✕</button>
+    <div id="result-label">WYNIK · ZAZNACZONY OBIEKT</div>
+    <div id="result-name">—</div>
+    <div id="result-number">0</div>
+    <div id="result-desc">sztuk widocznych w kadrze</div>
+    <div id="result-others"></div>
+  </div>
+
+  <!-- Start screen -->
+  <div id="start-screen">
+    <div style="font-size:3rem">📷</div>
+    <button id="btn-start" onclick="startCam()">URUCHOM KAMERĘ</button>
+    <p>Kamera pokaże podgląd na żywo.<br>Dotknij obiektu lub tagu, aby go policzyć.</p>
+  </div>
+</div>
+
+<div id="bottom">
+  <div id="bottom-hint">
+    <b>Dotknij obiektu</b> na podglądzie<br>lub wybierz tag, aby go policzyć
+  </div>
+  <button class="btn-sm" onclick="switchCam()">⟳ CAM</button>
+  <button class="btn-sm" onclick="scanFrame(null, null)">⚡ SKANUJ</button>
+</div>
+
+<canvas id="cap"></canvas>
+
+<script>
+const COLORS = [
+  '#00ff9d','#00c8ff','#ff3d7f','#ffd700',
+  '#a78bfa','#fb923c','#34d399','#f472b6',
+  '#60a5fa','#facc15','#4ade80','#c084fc'
+];
+const cmap = {};
+let ci = 0;
+function col(name) {
+  if (!cmap[name]) cmap[name] = COLORS[ci++ % COLORS.length];
+  return cmap[name];
+}
+
+let stream = null;
+let facing = 'environment';
+let busy = false;
+let lastObjects = {};
+let selectedObj = null;
+
+// ── START CAMERA ──
+async function startCam() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    const v = document.getElementById('video');
+    v.srcObject = stream;
+    await v.play();
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('hdr-status').textContent = '● AKTYWNY';
+    document.getElementById('hdr-status').className = 'on';
+
+    // Auto-scan every 4s
+    setInterval(() => { if (!busy) scanFrame(null, null, true); }, 4000);
+    // First scan after 1s
+    setTimeout(() => scanFrame(null, null, true), 1000);
+  } catch(e) {
+    alert('Błąd kamery: ' + e.message);
+  }
+}
+
+// ── SWITCH CAMERA ──
+async function switchCam() {
+  if (!stream) return;
+  facing = facing === 'environment' ? 'user' : 'environment';
+  stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
+    document.getElementById('video').srcObject = stream;
+  } catch(e) { alert('Błąd: ' + e.message); }
+}
+
+// ── TAP ON VIDEO ──
+document.getElementById('video-wrap').addEventListener('click', function(e) {
+  if (!stream || busy) return;
+  if (e.target.closest('#result-card')) return;
+  if (e.target.closest('#start-screen')) return;
+  if (e.target.closest('#live-tags')) return;
+
+  // Ripple
+  const rect = this.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  addRipple(x, y);
+
+  // Tap %
+  const xp = x / rect.width;
+  const yp = y / rect.height;
+  scanFrame(xp, yp, false);
+});
+
+function addRipple(x, y) {
+  const wrap = document.getElementById('video-wrap');
+  const r = document.createElement('div');
+  r.className = 'tap-ripple';
+  r.style.left = x + 'px';
+  r.style.top = y + 'px';
+  wrap.appendChild(r);
+  setTimeout(() => r.remove(), 500);
+}
+
+// ── SCAN FRAME ──
+async function scanFrame(xp, yp, silent) {
+  if (busy) return;
+  const video = document.getElementById('video');
+  if (!video.videoWidth) return;
+
+  busy = true;
+  if (!silent) {
+    document.getElementById('scan-anim').classList.add('show');
+    closeResult();
+  }
+
+  // Capture
+  const cap = document.getElementById('cap');
+  cap.width = video.videoWidth;
+  cap.height = video.videoHeight;
+  cap.getContext('2d').drawImage(video, 0, 0);
+  const b64 = cap.toDataURL('image/jpeg', 0.75).split(',')[1];
+
+  const tapInfo = (xp !== null && yp !== null)
+    ? `Użytkownik dotknął punktu (${Math.round(xp*100)}% szerokości, ${Math.round(yp*100)}% wysokości obrazu. Zidentyfikuj co jest w tym miejscu i ustaw to jako "dotkniety".`
+    : `Nie ma dotyku — wykryj wszystkie obiekty, ustaw "dotkniety" na najważniejszy/najliczniejszy obiekt.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+            { type: 'text', text: `Przeanalizuj obraz. ${tapInfo}
+
+Zwróć TYLKO czysty JSON (bez markdown, bez komentarzy):
+{
+  "dotkniety": "nazwa po polsku",
+  "liczba": 2,
+  "obiekty": {"Nazwa": 2, "Inne": 1}
+}
+
+Zasady:
+- Tylko rzeczywiście widoczne obiekty
+- Nazwy po polsku, z wielkiej litery
+- "liczba" = ile razy "dotkniety" jest widoczny
+- Nie wymyślaj obiektów których nie ma` }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const raw = (data.content?.[0]?.text || '{}').replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+
+    lastObjects = parsed.obiekty || {};
+    renderLiveTags(lastObjects, parsed.dotkniety);
+
+    if (!silent) {
+      showResult(parsed.dotkniety, parsed.liczba, lastObjects);
+    } else if (selectedObj && lastObjects[selectedObj] !== undefined) {
+      showResult(selectedObj, lastObjects[selectedObj], lastObjects);
+    }
+
+  } catch(err) {
+    if (!silent) alert('Błąd: ' + err.message);
+  }
+
+  document.getElementById('scan-anim').classList.remove('show');
+  busy = false;
+}
+
+// ── TAG CLICK ──
+function selectTag(name) {
+  selectedObj = name;
+  const count = lastObjects[name] || 0;
+  showResult(name, count, lastObjects);
+
+  // Highlight selected tag
+  document.querySelectorAll('.live-tag').forEach(t => {
+    t.classList.toggle('selected', t.dataset.name === name);
+  });
+}
+
+// ── RENDER LIVE TAGS ──
+function renderLiveTags(objects, highlighted) {
+  const wrap = document.getElementById('live-tags');
+  const entries = Object.entries(objects).sort((a,b) => b[1]-a[1]);
+  wrap.innerHTML = entries.map(([name, cnt]) => {
+    const c = col(name);
+    const isSel = name === (selectedObj || highlighted);
+    return `<div class="live-tag ${isSel ? 'selected' : ''}"
+      data-name="${name}"
+      style="color:${c}; border-color:${c};"
+      onclick="selectTag('${name.replace(/'/g,"\\'")}')">
+      ${name} <b>×${cnt}</b>
+    </div>`;
+  }).join('');
+}
+
+// ── SHOW RESULT ──
+function showResult(name, count, allObjects) {
+  document.getElementById('result-name').textContent = name || '?';
+  document.getElementById('result-number').textContent = count ?? 0;
+  document.getElementById('result-desc').textContent = `× "${name}" widocznych w kadrze`;
+  document.getElementById('result-name').style.color = col(name);
+
+  const others = Object.entries(allObjects || {})
+    .filter(([n]) => n !== name)
+    .sort((a,b) => b[1]-a[1]);
+
+  document.getElementById('result-others').innerHTML = others.length
+    ? others.map(([n,c]) =>
+        `<span class="other-tag" style="border-color:${col(n)};color:${col(n)}">${n} ×${c}</span>`
+      ).join('')
+    : '';
+
+  document.getElementById('result-card').classList.add('show');
+}
+
+// ── CLOSE RESULT ──
+function closeResult() {
+  document.getElementById('result-card').classList.remove('show');
+}
+</script>
+</body>
+</html>
