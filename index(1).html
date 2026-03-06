@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Licznik Obiektów AI</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: #fff; font-family: monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+#header {
+  padding: 10px 16px; background: #12121a;
+  border-bottom: 1px solid #222;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0; z-index: 10;
+}
+#header h1 { font-size: 1.1rem; color: #00ff9d; letter-spacing: 2px; }
+#status { font-size: 0.65rem; color: #555; }
+#status.on { color: #00ff9d; }
+
+/* Camera */
+#cam-wrap {
+  position: relative; flex: 1; background: #000; overflow: hidden;
+  cursor: crosshair;
+}
+video { width: 100%; height: 100%; object-fit: cover; display: block; }
+#overlay {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+/* Tap ripple */
+.ripple {
+  position: absolute; width: 60px; height: 60px;
+  border: 2px solid #00ff9d; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes ripple {
+  0% { transform: translate(-50%,-50%) scale(0); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(2); opacity: 0; }
+}
+
+/* Analyzing overlay */
+#scanning {
+  display: none;
+  position: absolute; inset: 0;
+  background: rgba(0,255,157,0.04);
+  border: 2px solid rgba(0,255,157,0.3);
+  pointer-events: none;
+}
+#scanning.active { display: block; animation: scanpulse 0.8s infinite alternate; }
+@keyframes scanpulse {
+  from { border-color: rgba(0,255,157,0.2); }
+  to { border-color: rgba(0,255,157,0.6); }
+}
+
+#scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #00ff9d, transparent);
+  box-shadow: 0 0 8px #00ff9d;
+  display: none;
+}
+#scan-line.active {
+  display: block;
+  animation: scanline 1.5s linear infinite;
+}
+@keyframes scanline {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+#scan-label {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); border: 1px solid #00ff9d;
+  color: #00ff9d; padding: 4px 14px; font-size: 0.7rem;
+  letter-spacing: 2px; border-radius: 3px; display: none; white-space: nowrap;
+}
+#scan-label.active { display: block; }
+
+/* Start screen */
+#start-screen {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  background: rgba(0,0,0,0.9); z-index: 5;
+}
+#start-screen .icon { font-size: 3rem; }
+#start-btn {
+  background: #00ff9d; color: #000; border: none;
+  padding: 14px 32px; font-family: monospace; font-size: 1rem;
+  font-weight: bold; letter-spacing: 2px; cursor: pointer; border-radius: 4px;
+}
+#start-screen .hint { font-size: 0.7rem; color: #555; text-align: center; line-height: 1.8; }
+
+/* Result popup */
+#result-popup {
+  display: none;
+  position: absolute; bottom: 16px; left: 16px; right: 16px;
+  background: rgba(10,10,15,0.95); border: 1px solid #00ff9d;
+  border-radius: 8px; padding: 16px; z-index: 20;
+  animation: popIn 0.3s ease;
+}
+@keyframes popIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+#result-popup.active { display: block; }
+#result-close {
+  position: absolute; top: 8px; right: 12px;
+  background: none; border: none; color: #555; font-size: 1.2rem; cursor: pointer;
+}
+#result-title { font-size: 0.6rem; color: #555; letter-spacing: 2px; margin-bottom: 8px; }
+#result-object { font-size: 1rem; color: #00ff9d; margin-bottom: 4px; font-weight: bold; }
+#result-count { font-size: 3.5rem; font-weight: bold; line-height: 1; color: #fff; }
+#result-sub { font-size: 0.7rem; color: #555; margin-top: 4px; }
+#result-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.result-tag {
+  background: rgba(0,255,157,0.1); border: 1px solid rgba(0,255,157,0.3);
+  color: #00ff9d; padding: 3px 10px; font-size: 0.7rem; border-radius: 3px;
+}
+
+/* Bottom bar */
+#bottom {
+  background: #12121a; border-top: 1px solid #222;
+  padding: 10px 16px; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: space-between; gap: 8px;
+}
+#hint-text { font-size: 0.7rem; color: #555; flex: 1; line-height: 1.4; }
+#hint-text span { color: #00ff9d; }
+button.ctrl {
+  padding: 8px 14px; border: 1px solid #333; background: transparent;
+  color: #aaa; font-family: monospace; font-size: 0.65rem;
+  letter-spacing: 1px; cursor: pointer; border-radius: 3px; white-space: nowrap;
+}
+button.ctrl:active { background: #222; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>OBJECTLENS</h1>
+  <span id="status">● OFFLINE</span>
+</div>
+
+<div id="cam-wrap" onclick="handleTap(event)">
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="overlay"></canvas>
+
+  <div id="scanning">
+    <div id="scan-line"></div>
+  </div>
+  <div id="scan-label">● SKANOWANIE...</div>
+
+  <div id="start-screen">
+    <div class="icon">📷</div>
+    <button id="start-btn" onclick="startCamera(event)">URUCHOM KAMERĘ</button>
+    <div class="hint">Aplikacja użyje kamery do wykrywania<br>i liczenia obiektów w czasie rzeczywistym</div>
+  </div>
+
+  <div id="result-popup">
+    <button id="result-close" onclick="closeResult(event)">✕</button>
+    <div id="result-title">WYNIK SKANOWANIA</div>
+    <div id="result-object"></div>
+    <div id="result-count">0</div>
+    <div id="result-sub">obiektów wykrytych w kadrze</div>
+    <div id="result-list"></div>
+  </div>
+</div>
+
+<div id="bottom">
+  <div id="hint-text">
+    <span>Dotknij dowolnego miejsca</span> na podglądzie kamery,<br>
+    aby zidentyfikować i policzyć obiekty
+  </div>
+  <button class="ctrl" onclick="switchCam(event)">⟳ CAM</button>
+</div>
+
+<canvas id="capture-canvas" style="display:none"></canvas>
+
+<script>
+let stream = null;
+let facing = 'environment';
+let busy = false;
+
+async function startCamera(e) {
+  if (e) e.stopPropagation();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('status').textContent = '● AKTYWNY';
+    document.getElementById('status').className = 'on';
+    resizeOverlay();
+  } catch(e) {
+    alert('Błąd kamery: ' + e.message);
+  }
+}
+
+async function switchCam(e) {
+  if (e) e.stopPropagation();
+  if (!stream) return;
+  facing = facing === 'environment' ? 'user' : 'environment';
+  stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
+    document.getElementById('video').srcObject = stream;
+  } catch(err) { alert('Błąd: ' + err.message); }
+}
+
+function resizeOverlay() {
+  const video = document.getElementById('video');
+  const overlay = document.getElementById('overlay');
+  overlay.width = video.offsetWidth;
+  overlay.height = video.offsetHeight;
+}
+
+function handleTap(e) {
+  if (!stream || busy) return;
+  if (e.target.id === 'start-btn' || e.target.closest('#result-popup')) return;
+
+  // Ripple effect
+  const wrap = document.getElementById('cam-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const ripple = document.createElement('div');
+  ripple.className = 'ripple';
+  ripple.style.left = x + 'px';
+  ripple.style.top = y + 'px';
+  wrap.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+
+  analyzeFrame(x, y, rect);
+}
+
+async function analyzeFrame(tapX, tapY, rect) {
+  busy = true;
+
+  // Show scanning UI
+  document.getElementById('scanning').classList.add('active');
+  document.getElementById('scan-line').classList.add('active');
+  document.getElementById('scan-label').classList.add('active');
+  closeResult();
+
+  // Capture
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  // Mark tap position as % of video
+  const tapXpct = Math.round(tapX / rect.width * 100);
+  const tapYpct = Math.round(tapY / rect.height * 100);
+
+  const b64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+            { type: 'text', text: `Użytkownik dotknął punktu (${tapXpct}%, ${tapYpct}%) obrazu (0,0 = lewy górny róg, 100,100 = prawy dolny róg).
+
+1. Zidentyfikuj jaki obiekt jest w tym miejscu (lub najbliżej tego miejsca).
+2. Policz ile WSZYSTKICH takich samych obiektów jest widocznych na całym obrazie.
+3. Podaj też wszystkie inne obiekty które widzisz.
+
+Odpowiedz TYLKO czystym JSON bez markdown:
+{
+  "dotkniety": "nazwa obiektu po polsku",
+  "liczba": 3,
+  "wszystkie_obiekty": {"Nazwa1": 2, "Nazwa2": 1}
+}` }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '{}').replace(/```json|```/g,'').trim();
+    const result = JSON.parse(text);
+
+    showResult(result);
+  } catch(err) {
+    alert('Błąd analizy: ' + err.message);
+  }
+
+  document.getElementById('scanning').classList.remove('active');
+  document.getElementById('scan-line').classList.remove('active');
+  document.getElementById('scan-label').classList.remove('active');
+  busy = false;
+}
+
+function showResult(result) {
+  const popup = document.getElementById('result-popup');
+  document.getElementById('result-object').textContent = result.dotkniety || '?';
+  document.getElementById('result-count').textContent = result.liczba || 0;
+  document.getElementById('result-sub').textContent =
+    `× "${result.dotkniety}" widocznych w kadrze`;
+
+  // Other objects
+  const others = Object.entries(result.wszystkie_obiekty || {})
+    .filter(([n]) => n !== result.dotkniety)
+    .sort((a,b) => b[1]-a[1]);
+
+  document.getElementById('result-list').innerHTML = others.length > 0
+    ? others.map(([n,c]) => `<span class="result-tag">${n} ×${c}</span>`).join('')
+    : '';
+
+  popup.classList.add('active');
+}
+
+function closeResult(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('result-popup').classList.remove('active');
+}
+
+window.addEventListener('resize', resizeOverlay);
+</script>
+</body>
+</html>
